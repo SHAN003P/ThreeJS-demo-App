@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My first three.js app</title>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@v0.173.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.173.0/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        position: fixed;
+      }
+
+      .wraper {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: gray;
+        color: black;
+        gap: 10px;
+        padding: 20px;
+        margin: 20px;
+        width: 200vh;
+        text-align: center;
+      }
+      .btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: gray;
+        color: black;
+        gap: 10px;
+        padding: 20px;
+        margin: 20px;
+        text-align: center;
+      }
+
+      .quiz {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: gray;
+        color: black;
+        gap: 10px;
+        padding: 20px;
+        margin: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- <div class="container">
+			<div class="wraper">
+				<h3>Add model</h3>
+				<input type="file" name="model" id="fileinput">
+			</div>
+		</div> -->
+    <div class="container">
+      <button class="btn">Reset</button>
+      <!-- <button class="quiz">Start Quiz</button> -->
+    </div>
+    <canvas id="canvas"></canvas>
+    <script type="module" src="/temp3.js"></script>
+  </body>
+</html>
