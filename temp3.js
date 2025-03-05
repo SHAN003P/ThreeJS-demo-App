@@ -36,30 +36,7 @@ async function load() {
 
   //animation function
   function animate() {
-    // setTimeout(() => {
-    //   const intersects = raycaster6.intersectObjects(objects, true);
-    //   if (intersects.length > 0) {
-    //     // console.log("✅ Intersection detected!", intersects[0]);
-    //     // console.log("✅ Intersection detected!", intersects[0].object.material.color);
-    //     if (intersects[0].object.name == "Plane053_2") {
-    //       intersects[0].object.material.color.set(
-    //         0.8000000715255737,
-    //         0.4361596405506134,
-    //         0.22510652244091034
-    //       );
-    //       console.log("✅ Intersection detected!",intersects[0].object.material.color);
-    //     } else {
-    //       intersects[0].object.material.color.set(1, 1, 1);
-    //     }
-
-    //     intersects[0].object.position.x = 0;
-    //     intersects[0].object.position.y = 0;
-    //     intersects[0].object.position.z = 0;
-    //   } else {
-    //     console.log("❌ No intersections found.");
-    //   }
-    // }, 100);
-
+    controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
@@ -100,7 +77,7 @@ async function load() {
   const loader = new GLTFLoader();
   await loader.load("./flower.glb", function (gltf) {
     model = gltf.scene;
-    console.log("model---->", model);
+    // console.log("model---->", model);
 
     // Center the model
     model.position.set(0, 0, 0);
@@ -112,21 +89,46 @@ async function load() {
     scene.add(model);
 
     cnt = new DragControls([model], camera, renderer.domElement);
+    console.log(model.children[0].children[0].userData);
+
     // cnt.rotateSpeed = 2;
     cnt.addEventListener("drag", render);
+
     cnt.addEventListener("dragstart", function () {
       controls.enabled = false; // Disable OrbitControls
     });
+
     cnt.addEventListener("dragend", function () {
       controls.enabled = true; // Enable OrbitControls again
-      console.log("dragend--------->", objects);
+      // console.log("dragend--------->", objects);
 
-      const snapDistance = 2;
+      const snapDistance = 3;
+
+      // objects = objects.filter((obj) => {
+      //   let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
+      //   // console.log("distance -------->", distance);
+
+      //   obj.material.color.set(0, 0, 0);
+
+      //   if (distance < snapDistance) {
+      //     obj.position.set(0, 0, 0); // Snap to (0,0,0)
+
+      //     if (obj.name == "Plane053_2") {
+      //       obj.material.color.set(new THREE.Color(0.8, 0.436, 0.225)); // Set specific color
+      //     } else {
+      //       obj.material.color.set(new THREE.Color(1, 1, 1)); // Set white color
+      //     }
+      //     return false; // Remove this object from the array
+
+      //   }
+
+      //   return true; // Keep this object in the array
+      // });
 
       objects.map((obj) => {
         let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
         console.log("distance -------->", distance);
-
+        obj.material.color.set(0, 0, 0);
         if (distance < snapDistance) {
           obj.position.set(0, 0, 0); // Snap to (0,0,0)
           if (obj.name == "Plane053_2") {
@@ -148,10 +150,10 @@ async function load() {
     const changeMeshPosition = (mesh) => {
       // console.log("mesh-->", mesh.name);
       mesh.material.color.set(0, 0, 0);
-      console.log(mesh.material.color, "object's name--->", mesh.name);
+      // console.log(mesh.material.color, "object's name--->", mesh.name);
 
       mesh.position.x = Math.random() * 20 - 7;
-      mesh.position.y = Math.random() * 20 - 10;
+      mesh.position.y = Math.random() * 20 - 7;
       mesh.position.z = 0;
       copyX.push(mesh.position.clone());
     };
@@ -173,6 +175,20 @@ async function load() {
 
   function render() {
     renderer.render(scene, camera);
+
+    //change the object's color 'red' OR 'green'
+    const snapDistance = 2;
+    objects.map((obj) => {
+      let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
+      console.log("distance -------->", distance);
+
+      if (distance > snapDistance) {
+        obj.material.color.set("red");
+      }
+      if (distance < snapDistance) {
+        obj.material.color.set("green");
+      }
+    });
   }
 
   //Reset model
