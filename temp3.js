@@ -47,10 +47,7 @@ async function load() {
     //         0.4361596405506134,
     //         0.22510652244091034
     //       );
-    //       console.log(
-    //         "✅ Intersection detected!",
-    //         intersects[0].object.material.color
-    //       );
+    //       console.log("✅ Intersection detected!",intersects[0].object.material.color);
     //     } else {
     //       intersects[0].object.material.color.set(1, 1, 1);
     //     }
@@ -59,7 +56,7 @@ async function load() {
     //     intersects[0].object.position.y = 0;
     //     intersects[0].object.position.z = 0;
     //   } else {
-    //     // console.log("❌ No intersections found.");
+    //     console.log("❌ No intersections found.");
     //   }
     // }, 100);
 
@@ -103,7 +100,7 @@ async function load() {
   const loader = new GLTFLoader();
   await loader.load("./flower.glb", function (gltf) {
     model = gltf.scene;
-    console.log(model);
+    console.log("model---->", model);
 
     // Center the model
     model.position.set(0, 0, 0);
@@ -126,7 +123,6 @@ async function load() {
 
       const snapDistance = 2;
 
-      // Drag event listener
       objects.map((obj) => {
         let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
         console.log("distance -------->", distance);
@@ -188,11 +184,11 @@ async function load() {
       }
     });
 
-    if (model) {
-      model.position.copy(originalState.position);
-      model.scale.copy(originalState.scale);
-      render();
-    }
+    // if (model) {
+    //   model.position.copy(originalState.position);
+    //   model.scale.copy(originalState.scale);
+    //   render();
+    // }
     // console.log("btn-------->", model);
   });
 
