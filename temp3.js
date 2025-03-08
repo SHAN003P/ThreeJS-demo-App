@@ -14,7 +14,10 @@ async function load() {
   let objects = [];
   let raycaster;
   let tControls;
-  let size
+  let size;
+  let snapDistance = 1;
+  let draggedObject = null;
+  const targetSize = 5;
 
   const canvas = document.querySelector("#canvas");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -82,33 +85,33 @@ async function load() {
 
   //3D model--------------------------------------------------------------------------------------------------
   const loader = new GLTFLoader();
-  await loader.load("./flower.glb", function (gltf, targetSize = 10) {
+  await loader.load("./leafCell.glb", function (gltf, targetSize = 5) {
     model = gltf.scene;
-    // console.log("model---->", model);
-
-    // Center the model
     model.position.set(0, 0, 0);
-    model.scale.set(20, 20, 20);
 
-    // // Compute bounding box
-    // let box = new THREE.Box3().setFromObject(model);
-    // size = box.getSize(new THREE.Vector3()); // Get model size
-    // console.log(size);
-    
-    // // Determine the scale factor (uniform scaling)
-    // let maxDimension = Math.max(size.x, size.y, size.z);
-    // let scaleFactor = targetSize / maxDimension;
+    // Compute bounding box
+    let box = new THREE.Box3().setFromObject(model);
+    let size = box.getSize(new THREE.Vector3()); // Get model size
+    // let center = box.getCenter(new THREE.Vector3()); // Get model center 
 
-    // // Apply scaling
-    // model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    // Determine the scale factor (uniform scaling)
+    let maxDimension = Math.max(size.x, size.y, size.z);
+    let scaleFactor = targetSize / maxDimension;
 
-    // // Optional: Center model by adjusting position
-    // let center = box.getCenter(new THREE.Vector3());
-    // model.position.sub(center.multiplyScalar(scaleFactor));
+    // Apply uniform scaling
+    model.scale.setScalar(scaleFactor);
+
+    // Recompute bounding box after scaling
+    box.setFromObject(model);
+    let newCenter = box.getCenter(new THREE.Vector3());
+
+    // Adjust position so model is centered at (0,0,0)
+    model.position.sub(newCenter.multiplyScalar(scaleFactor));
 
     // Store the original state
     originalState.position = model.position.clone();
     originalState.scale = model.scale.clone();
+
     scene.add(model);
 
     cnt = new DragControls([model], camera, renderer.domElement);
@@ -116,15 +119,15 @@ async function load() {
 
     // cnt.rotateSpeed = 2;
 
-    cnt.addEventListener("dragstart", function () {
+    cnt.addEventListener("dragstart", function (e) {
       controls.enabled = false; // Disable OrbitControls
+      draggedObject = e.object; // Set the currently dragged object
     });
 
     cnt.addEventListener("dragend", function () {
+      draggedObject = null; // Clear the dragged object
       controls.enabled = true; // Enable OrbitControls again
       // console.log("dragend--------->", objects);
-
-      const snapDistance = 1;
 
       // objects = objects.filter((obj, index) => {
       //   let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
@@ -215,18 +218,19 @@ async function load() {
     renderer.render(scene, camera);
 
     //change the object's color 'red' OR 'green'
-    const snapDistance = 1;
-    objects.map((obj) => {
-      let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
+    if (draggedObject) {
+      let distance = draggedObject.position.distanceTo(
+        new THREE.Vector3(0, 0, 0)
+      ); // Measure distance
       // console.log("distance -------->", distance);
 
       if (distance > snapDistance) {
-        obj.material.color.set("red");
+        draggedObject.material.color.set("red");
       }
       if (distance < snapDistance) {
-        obj.material.color.set("green");
+        draggedObject.material.color.set("green");
       }
-    });
+    }
   }
 
   //Reset model
@@ -239,7 +243,6 @@ async function load() {
     });
   });
 
-  
   tControls = new TransformControls(camera, renderer.domElement);
 
   // Click event listener
@@ -253,7 +256,7 @@ async function load() {
 
     // Check for intersections
     const intersects = raycaster.intersectObjects(scene.children);
-    tControls.detach()
+    tControls.detach();
     if (intersects.length > 0 && intersects[0].object.isMesh) {
       console.log("Clicked on:", intersects[0].object);
       tControls.attach(intersects[0].object);

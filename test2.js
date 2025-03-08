@@ -4,7 +4,6 @@ import { DragControls } from "three/addons/controls/DragControls.js";
 import { GLTFLoader } from "https://unpkg.com/three@latest/examples/jsm/loaders/GLTFLoader.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-
 async function load() {
   console.log("working");
   let originalState = {};
@@ -13,6 +12,11 @@ async function load() {
   let controls;
   let raycaster6;
   let objects = [];
+  let raycaster;
+  let tControls;
+  let size;
+  let snapDistance = 1;
+  let draggedObject = null;
 
   const canvas = document.querySelector("#canvas");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -37,9 +41,9 @@ async function load() {
 
   //animation function
   function animate() {
+    requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
   }
 
   //directional light
@@ -74,9 +78,13 @@ async function load() {
   // Add to the scene
   scene.add(line6);
 
+  // Raycaster and mouse vector
+  raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
   //3D model--------------------------------------------------------------------------------------------------
   const loader = new GLTFLoader();
-  await loader.load("./flower.glb", function (gltf) {
+  await loader.load("./flower.glb", function (gltf, targetSize = 5) {
     model = gltf.scene;
     // console.log("model---->", model);
 
@@ -94,16 +102,15 @@ async function load() {
 
     // cnt.rotateSpeed = 2;
 
-    cnt.addEventListener("dragstart", function () {
+    cnt.addEventListener("dragstart", function (e) {
       controls.enabled = false; // Disable OrbitControls
-
+      draggedObject = e.object; // Set the currently dragged object
     });
 
     cnt.addEventListener("dragend", function () {
+      draggedObject = null; // Clear the dragged object
       controls.enabled = true; // Enable OrbitControls again
       // console.log("dragend--------->", objects);
-
-      const snapDistance = 2;
 
       // objects = objects.filter((obj, index) => {
       //   let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
@@ -133,7 +140,7 @@ async function load() {
       objects.map((obj) => {
         let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
         // console.log("distance -------->", distance);
-        obj.material.color.set(0, 0, 0);
+        obj.material.color.set(1, 1, 1);
 
         // Object.freeze(obj.position)
 
@@ -167,7 +174,7 @@ async function load() {
     //function to change mesh position-------------------------------------------------------------------
     const changeMeshPosition = (mesh) => {
       // console.log("mesh-->", mesh.name);
-      mesh.material.color.set(0, 0, 0);
+      // mesh.material.color.set(0, 0, 0);
       // console.log(mesh.material.color, "object's name--->", mesh.name);
 
       mesh.position.x = Math.random() * 20 - 7;
@@ -194,18 +201,17 @@ async function load() {
     renderer.render(scene, camera);
 
     //change the object's color 'red' OR 'green'
-    const snapDistance = 2;
-    objects.map((obj) => {
-      let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
-      // console.log("distance -------->", distance);
+      if (draggedObject) {
+        let distance = draggedObject.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
+        // console.log("distance -------->", distance);
 
-      if (distance > snapDistance) {
-        obj.material.color.set("red");
-      }
-      if (distance < snapDistance) {
-        obj.material.color.set("green");
-      }
-    });
+        if (distance > snapDistance) {
+          draggedObject.material.color.set("red");
+        }
+        if (distance < snapDistance) {
+          draggedObject.material.color.set("green");
+        }
+      } 
   }
 
   //Reset model
@@ -216,6 +222,30 @@ async function load() {
         // console.log("child");
       }
     });
+  });
+
+  tControls = new TransformControls(camera, renderer.domElement);
+
+  // Click event listener
+  window.addEventListener("click", (event) => {
+    // Convert mouse position to normalized device coordinates (-1 to +1)
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Update the raycaster
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check for intersections
+    const intersects = raycaster.intersectObjects(scene.children);
+    tControls.detach();
+    if (intersects.length > 0 && intersects[0].object.isMesh) {
+      console.log("Clicked on:", intersects[0].object);
+      tControls.attach(intersects[0].object);
+      tControls.addEventListener("dragging-changed", (event) => {
+        controls.enabled = !event.value;
+      });
+      scene.add(tControls.getHelper());
+    }
   });
 
   // Create a Raycaster 2
