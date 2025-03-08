@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DragControls } from "three/addons/controls/DragControls.js";
 import { GLTFLoader } from "https://unpkg.com/three@latest/examples/jsm/loaders/GLTFLoader.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 async function load() {
   console.log("working");
@@ -11,7 +12,9 @@ async function load() {
   let controls;
   let raycaster6;
   let objects = [];
-  let copyX = [];
+  let raycaster;
+  let tControls;
+  let size
 
   const canvas = document.querySelector("#canvas");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -36,9 +39,9 @@ async function load() {
 
   //animation function
   function animate() {
+    requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
   }
 
   //directional light
@@ -73,9 +76,13 @@ async function load() {
   // Add to the scene
   scene.add(line6);
 
+  // Raycaster and mouse vector
+  raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
   //3D model--------------------------------------------------------------------------------------------------
   const loader = new GLTFLoader();
-  await loader.load("./flower.glb", function (gltf) {
+  await loader.load("./flower.glb", function (gltf, targetSize = 10) {
     model = gltf.scene;
     // console.log("model---->", model);
 
@@ -83,16 +90,31 @@ async function load() {
     model.position.set(0, 0, 0);
     model.scale.set(20, 20, 20);
 
+    // // Compute bounding box
+    // let box = new THREE.Box3().setFromObject(model);
+    // size = box.getSize(new THREE.Vector3()); // Get model size
+    // console.log(size);
+    
+    // // Determine the scale factor (uniform scaling)
+    // let maxDimension = Math.max(size.x, size.y, size.z);
+    // let scaleFactor = targetSize / maxDimension;
+
+    // // Apply scaling
+    // model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+    // // Optional: Center model by adjusting position
+    // let center = box.getCenter(new THREE.Vector3());
+    // model.position.sub(center.multiplyScalar(scaleFactor));
+
     // Store the original state
     originalState.position = model.position.clone();
     originalState.scale = model.scale.clone();
     scene.add(model);
 
     cnt = new DragControls([model], camera, renderer.domElement);
-    console.log(model.children[0].children[0].userData);
+    cnt.addEventListener("drag", render);
 
     // cnt.rotateSpeed = 2;
-    cnt.addEventListener("drag", render);
 
     cnt.addEventListener("dragstart", function () {
       controls.enabled = false; // Disable OrbitControls
@@ -102,9 +124,9 @@ async function load() {
       controls.enabled = true; // Enable OrbitControls again
       // console.log("dragend--------->", objects);
 
-      const snapDistance = 3;
+      const snapDistance = 1;
 
-      // objects = objects.filter((obj) => {
+      // objects = objects.filter((obj, index) => {
       //   let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
       //   // console.log("distance -------->", distance);
 
@@ -118,27 +140,44 @@ async function load() {
       //     } else {
       //       obj.material.color.set(new THREE.Color(1, 1, 1)); // Set white color
       //     }
+      //     // obj.matrixAutoUpdate = false;
+      //     // temp.push(obj)
+      //     // console.log(temp);
+      //     // console.log(index);
+
+      //     // temp[index].matrixAutoUpdate = false;
       //     return false; // Remove this object from the array
-
       //   }
-
       //   return true; // Keep this object in the array
       // });
 
       objects.map((obj) => {
         let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
-        console.log("distance -------->", distance);
-        obj.material.color.set(0, 0, 0);
+        // console.log("distance -------->", distance);
+        obj.material.color.set(1, 1, 1);
+
+        // Object.freeze(obj.position)
+
         if (distance < snapDistance) {
-          obj.position.set(0, 0, 0); // Snap to (0,0,0)
+          //Snap to (0,0,0) first
+          obj.position.set(0, 0, 0);
+
+          //Force update the object's matrix
+          obj.updateMatrixWorld(true);
+
+          //Disable further updates
+          obj.matrixAutoUpdate = false;
+
           if (obj.name == "Plane053_2") {
             obj.material.color.set(
               0.8000000715255737,
               0.4361596405506134,
               0.22510652244091034
             );
+            obj.matrixAutoUpdate = false;
           } else {
             obj.material.color.set(1, 1, 1);
+            obj.matrixAutoUpdate = false;
           }
         }
       });
@@ -149,13 +188,12 @@ async function load() {
     //function to change mesh position-------------------------------------------------------------------
     const changeMeshPosition = (mesh) => {
       // console.log("mesh-->", mesh.name);
-      mesh.material.color.set(0, 0, 0);
+      // mesh.material.color.set(0, 0, 0);
       // console.log(mesh.material.color, "object's name--->", mesh.name);
 
       mesh.position.x = Math.random() * 20 - 7;
       mesh.position.y = Math.random() * 20 - 7;
       mesh.position.z = 0;
-      copyX.push(mesh.position.clone());
     };
     // console.log("mesh posi", copyX);
     // console.log(model);
@@ -177,10 +215,10 @@ async function load() {
     renderer.render(scene, camera);
 
     //change the object's color 'red' OR 'green'
-    const snapDistance = 2;
+    const snapDistance = 1;
     objects.map((obj) => {
       let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
-      console.log("distance -------->", distance);
+      // console.log("distance -------->", distance);
 
       if (distance > snapDistance) {
         obj.material.color.set("red");
@@ -199,13 +237,31 @@ async function load() {
         // console.log("child");
       }
     });
+  });
 
-    // if (model) {
-    //   model.position.copy(originalState.position);
-    //   model.scale.copy(originalState.scale);
-    //   render();
-    // }
-    // console.log("btn-------->", model);
+  
+  tControls = new TransformControls(camera, renderer.domElement);
+
+  // Click event listener
+  window.addEventListener("click", (event) => {
+    // Convert mouse position to normalized device coordinates (-1 to +1)
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Update the raycaster
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check for intersections
+    const intersects = raycaster.intersectObjects(scene.children);
+    tControls.detach()
+    if (intersects.length > 0 && intersects[0].object.isMesh) {
+      console.log("Clicked on:", intersects[0].object);
+      tControls.attach(intersects[0].object);
+      tControls.addEventListener("dragging-changed", (event) => {
+        controls.enabled = !event.value;
+      });
+      scene.add(tControls.getHelper());
+    }
   });
 
   // Create a Raycaster 2
@@ -275,6 +331,14 @@ async function load() {
   const line5 = new THREE.Line(geometry5, material5);
   // Add to the scene
   scene.add(line5);
+
+  //resize function
+  window.addEventListener("resize", onWindowResize);
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.updateProjectionMatrix();
+  }
 
   animate();
 }
