@@ -15,9 +15,11 @@ async function load() {
   let raycaster;
   let tControls;
   let size;
-  let snapDistance = 1;
+  let snapDistance = 2;
   let draggedObject = null;
   const targetSize = 5;
+  let scaleFactor;
+  let scatterFactor
 
   const canvas = document.querySelector("#canvas");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -25,7 +27,7 @@ async function load() {
 
   //scene
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f0);
+  scene.background = new THREE.Color("lightgray");
   const camera = new THREE.PerspectiveCamera(
     10,
     window.innerWidth / window.innerHeight,
@@ -83,30 +85,41 @@ async function load() {
   raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
-  //3D model--------------------------------------------------------------------------------------------------
+  //start-->Load 3D model--------------------------------------------------------------------------------------------------
   const loader = new GLTFLoader();
-  await loader.load("./leafCell.glb", function (gltf, targetSize = 5) {
+  await loader.load("./felix_the_cat.glb", function (gltf) {
     model = gltf.scene;
-    model.position.set(0, 0, 0);
 
+
+    //start-->unite scaling-----------------------------------------------------
     // Compute bounding box
     let box = new THREE.Box3().setFromObject(model);
+    console.log("min", box.min);
+    console.log("max", box.max);
+
     let size = box.getSize(new THREE.Vector3()); // Get model size
-    // let center = box.getCenter(new THREE.Vector3()); // Get model center 
+    console.log("box size", size);
 
     // Determine the scale factor (uniform scaling)
     let maxDimension = Math.max(size.x, size.y, size.z);
-    let scaleFactor = targetSize / maxDimension;
+    scaleFactor = targetSize / maxDimension;
 
     // Apply uniform scaling
     model.scale.setScalar(scaleFactor);
 
+    console.log("Scale Factor:", scaleFactor, "Snap Distance:", snapDistance);
+
     // Recompute bounding box after scaling
     box.setFromObject(model);
-    let newCenter = box.getCenter(new THREE.Vector3());
+    console.log("new box min", box.min);
+    console.log("new box max", box.max);
 
+    // let newCenter = box.getCenter(new THREE.Vector3());
     // Adjust position so model is centered at (0,0,0)
-    model.position.sub(newCenter.multiplyScalar(scaleFactor));
+    // model.position.sub(newCenter.multiplyScalar(scaleFactor));
+    
+    //end-->unite scaling-----------------------------------------------------------
+
 
     // Store the original state
     originalState.position = model.position.clone();
@@ -114,45 +127,20 @@ async function load() {
 
     scene.add(model);
 
+
+    //drag model
     cnt = new DragControls([model], camera, renderer.domElement);
+    
+    
+    //Events
     cnt.addEventListener("drag", render);
-
-    // cnt.rotateSpeed = 2;
-
     cnt.addEventListener("dragstart", function (e) {
       controls.enabled = false; // Disable OrbitControls
       draggedObject = e.object; // Set the currently dragged object
     });
-
     cnt.addEventListener("dragend", function () {
       draggedObject = null; // Clear the dragged object
       controls.enabled = true; // Enable OrbitControls again
-      // console.log("dragend--------->", objects);
-
-      // objects = objects.filter((obj, index) => {
-      //   let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
-      //   // console.log("distance -------->", distance);
-
-      //   obj.material.color.set(0, 0, 0);
-
-      //   if (distance < snapDistance) {
-      //     obj.position.set(0, 0, 0); // Snap to (0,0,0)
-
-      //     if (obj.name == "Plane053_2") {
-      //       obj.material.color.set(new THREE.Color(0.8, 0.436, 0.225)); // Set specific color
-      //     } else {
-      //       obj.material.color.set(new THREE.Color(1, 1, 1)); // Set white color
-      //     }
-      //     // obj.matrixAutoUpdate = false;
-      //     // temp.push(obj)
-      //     // console.log(temp);
-      //     // console.log(index);
-
-      //     // temp[index].matrixAutoUpdate = false;
-      //     return false; // Remove this object from the array
-      //   }
-      //   return true; // Keep this object in the array
-      // });
 
       objects.map((obj) => {
         let distance = obj.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Measure distance
@@ -177,42 +165,50 @@ async function load() {
               0.4361596405506134,
               0.22510652244091034
             );
-            obj.matrixAutoUpdate = false;
+            // obj.matrixAutoUpdate = false;
           } else {
             obj.material.color.set(1, 1, 1);
-            obj.matrixAutoUpdate = false;
+            // obj.matrixAutoUpdate = false;
           }
+          obj.matrixAutoUpdate = false;
         }
       });
     });
 
     renderer.setAnimationLoop(animate());
 
-    //function to change mesh position-------------------------------------------------------------------
-    const changeMeshPosition = (mesh) => {
-      // console.log("mesh-->", mesh.name);
-      // mesh.material.color.set(0, 0, 0);
-      // console.log(mesh.material.color, "object's name--->", mesh.name);
+    // function to change mesh position
+    const changeMeshPosition = (mesh, modelScaleFactor) => {
+      if(modelScaleFactor >= 10){
+        scatterFactor = modelScaleFactor * 2;
+      }else{ 
+        scatterFactor = 10 / modelScaleFactor; // Inverse proportionality
+      }
+      
+      console.log(scatterFactor);
+      scatterFactor = Math.max(scatterFactor, 1); // Prevent excessive scattering
 
-      mesh.position.x = Math.random() * 20 - 7;
-      mesh.position.y = Math.random() * 20 - 7;
-      mesh.position.z = 0;
+      mesh.position.x = (Math.random() * 2 - 1) * scatterFactor;
+      mesh.position.y = (Math.random() * 2 - 1) * scatterFactor;
+      mesh.position.z = 0; // Keep Z fixed or modify as needed
     };
-    // console.log("mesh posi", copyX);
-    // console.log(model);
+
+    // const changeMeshPosition = (mesh) => {
+    //   mesh.position.x = Math.random() * 20 - 5;
+    //   mesh.position.y = Math.random() * 20 - 5;
+    //   mesh.position.z = 0;
+    // };
 
     model.traverse((child) => {
       if (child.isMesh) {
         objects.push(child);
         // console.log("all child---->", child);
-        changeMeshPosition(child);
+        changeMeshPosition(child, scaleFactor);
       }
     });
-
-    // console.log("objects", objects);
   });
+  //end-->Load 3D model----------------------------------------------------------------------------------------------------
 
-  // console.log("model outside--->", model);
 
   function render() {
     renderer.render(scene, camera);
@@ -233,11 +229,13 @@ async function load() {
     }
   }
 
+
   //Reset model
   document.querySelector(".btn").addEventListener("click", function () {
     model.traverse((child) => {
       if (child.isMesh) {
-        child.position.copy(originalState.position);
+        // child.position.copy(originalState.position);
+        child.position.set(0, 0, 0);
         // console.log("child");
       }
     });
@@ -266,6 +264,7 @@ async function load() {
       scene.add(tControls.getHelper());
     }
   });
+
 
   // Create a Raycaster 2
   const raycaster2 = new THREE.Raycaster();

@@ -14,7 +14,6 @@ async function load() {
   let objects = [];
   let raycaster;
   let tControls;
-  let size;
   let snapDistance = 1;
   let draggedObject = null;
 
