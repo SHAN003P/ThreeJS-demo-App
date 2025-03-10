@@ -87,7 +87,7 @@ async function load() {
 
   //start-->Load 3D model--------------------------------------------------------------------------------------------------
   const loader = new GLTFLoader();
-  await loader.load("./felix_the_cat.glb", function (gltf) {
+  await loader.load("./flower.glb", function (gltf) {
     model = gltf.scene;
 
 
